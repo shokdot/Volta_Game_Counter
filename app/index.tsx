@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar } from 'react-native-calendars';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Game = {
   id: string;
@@ -151,160 +152,125 @@ export default function Index() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.navContainer}>
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total Balance</Text>
-          <Text style={[
-            styles.totalValue,
-            { color: finalTotal >= 0 ? (finalTotal > 0 ? '#34c759' : '#333') : '#ff3b30' }
-          ]}>
-            {finalTotal > 0 ? '+' : ''}{finalTotal}
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Volta Counter</Text>
         </View>
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.navScroll}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
-        >
-          {monthsData.map((data, index) => (
-            <TouchableOpacity
-              key={data.month}
-              style={[styles.monthCard, currentMonth === data.month && styles.monthCardActive]}
-              onPress={() => setCurrentMonth(data.month)}
-            >
-              <Text style={[styles.monthName, currentMonth === data.month && styles.monthNameActive]}>{data.name}</Text>
+        <View style={styles.heroCardContainer}>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroLabel}>Total Balance</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+              {finalTotal > 0 && <Text style={[styles.heroValue, styles.heroValuePositive, { fontSize: 32, paddingBottom: 2 }]}>+</Text>}
+              {finalTotal < 0 && <Text style={[styles.heroValue, styles.heroValueNegative, { fontSize: 32, paddingBottom: 2 }]}>-</Text>}
               <Text style={[
-                styles.monthSum,
-                currentMonth === data.month && styles.monthSumActive,
-                !styles.monthSumActive && { color: data.sum >= 0 ? (data.sum > 0 ? '#34c759' : '#333') : '#ff3b30' }
+                styles.heroValue,
+                finalTotal >= 0 ? styles.heroValuePositive : styles.heroValueNegative
               ]}>
-                {data.sum > 0 ? '+' : ''}{data.sum}
+                {Math.abs(finalTotal)}
               </Text>
+              <Text style={styles.heroCurrency}> AMD</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.navContainer}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navScroll}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+          >
+            {monthsData.map((data, index) => (
+              <TouchableOpacity
+                key={data.month}
+                style={[styles.monthCard, currentMonth === data.month && styles.monthCardActive]}
+                onPress={() => setCurrentMonth(data.month)}
+              >
+                <Text style={[styles.monthName, currentMonth === data.month && styles.monthNameActive]}>{data.name}</Text>
+                <Text style={[
+                  styles.monthSum,
+                  currentMonth === data.month && styles.monthSumActive,
+                  !styles.monthSumActive && { color: data.sum >= 0 ? (data.sum > 0 ? '#10B981' : '#0F172A') : '#F43F5E' }
+                ]}>
+                  {data.sum > 0 ? '+' : ''}{data.sum}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.calendarSection}>
+          <View style={styles.calendarHeader}>
+            <Text style={styles.calendarTitle}>Activity</Text>
+            <TouchableOpacity style={styles.deleteMonthButton} onPress={confirmDeleteMonth}>
+              <Text style={styles.deleteMonthText}>Clear Month</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+          </View>
 
-      <View style={styles.calendarHeader}>
-        <TouchableOpacity style={styles.deleteMonthButton} onPress={confirmDeleteMonth}>
-          <Text style={styles.deleteMonthText}>Delete {currentMonth} Data</Text>
-        </TouchableOpacity>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.calendarContainer}>
+            <Calendar
+              current={currentMonth + '-01'}
+              onMonthChange={(month: any) => {
+                setCurrentMonth(month.dateString.substring(0, 7));
+              }}
+              onDayPress={(day: any) => {
+                router.push(`/day/${day.dateString}` as any);
+              }}
+              theme={{
+                backgroundColor: '#ffffff',
+                calendarBackground: '#ffffff',
+                textSectionTitleColor: '#64748B',
+                selectedDayBackgroundColor: '#6366F1',
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: '#6366F1',
+                dayTextColor: '#0F172A',
+                textDisabledColor: '#CBD5E1',
+                dotColor: '#6366F1',
+                selectedDotColor: '#ffffff',
+                arrowColor: '#6366F1',
+                monthTextColor: '#0F172A',
+                indicatorColor: '#6366F1',
+                textDayFontWeight: '600',
+                textMonthFontWeight: 'bold',
+                textDayHeaderFontWeight: '600',
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 14
+              }}
+            />
+          </ScrollView>
+        </View>
       </View>
-
-      <View style={styles.calendarContainer}>
-        <Calendar
-          current={currentMonth + '-01'}
-          onMonthChange={(month: any) => {
-            setCurrentMonth(month.dateString.substring(0, 7));
-          }}
-          onDayPress={(day: any) => {
-            router.push(`/day/${day.dateString}` as any);
-          }}
-          theme={{
-            todayTextColor: '#007AFF',
-            selectedDayBackgroundColor: '#007AFF',
-            arrowColor: '#007AFF',
-          }}
-        />
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  navContainer: {
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  navScroll: {
-    paddingHorizontal: 15,
-  },
-  monthCard: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-    marginRight: 10,
-    alignItems: 'center',
-    minWidth: 90,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  monthCardActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  monthName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-  },
-  monthNameActive: {
-    color: '#fff',
-  },
-  monthSum: {
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  monthSumActive: {
-    color: '#fff',
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
-  deleteMonthButton: {
-    backgroundColor: '#ff3b30',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  deleteMonthText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  calendarContainer: {
-    flex: 1,
-    paddingTop: 10,
-  }
+  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: '#F8FAFC' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', marginBottom: 10, letterSpacing: -0.5 },
+  heroCardContainer: { paddingHorizontal: 20, paddingTop: 10, backgroundColor: '#F8FAFC' },
+  heroCard: { backgroundColor: '#6366F1', borderRadius: 24, padding: 24, shadowColor: '#6366F1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8, marginBottom: 24 },
+  heroLabel: { color: '#E0E7FF', fontSize: 14, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  heroValue: { color: '#FFFFFF', fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+  heroCurrency: { color: '#E0E7FF', fontSize: 18, fontWeight: '700', marginBottom: 6, marginLeft: 4 },
+  heroValuePositive: { color: '#FFFFFF' },
+  heroValueNegative: { color: '#FDA4AF' },
+  navContainer: { marginBottom: 24 },
+  navScroll: { paddingHorizontal: 20, gap: 12 },
+  monthCard: { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', minWidth: 110, shadowColor: '#475569', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#F1F5F9' },
+  monthCardActive: { backgroundColor: '#1E293B', borderColor: '#1E293B', shadowColor: '#1E293B', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12 },
+  monthName: { fontSize: 13, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  monthNameActive: { color: '#94A3B8' },
+  monthSum: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  monthSumActive: { color: '#FFFFFF' },
+  calendarSection: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 10 },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 },
+  calendarTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
+  deleteMonthButton: { backgroundColor: '#FFE4E6', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12 },
+  deleteMonthText: { color: '#E11D48', fontSize: 13, fontWeight: '700' },
+  calendarContainer: { paddingHorizontal: 10, paddingBottom: 40 }
 });
