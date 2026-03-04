@@ -23,9 +23,32 @@ export default function Index() {
   const [finalTotal, setFinalTotal] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
+
+
+  const getReportingMonth = (dateStr: string): string => {
+    const cutoff = 25;
+    // dateStr is 'YYYY-MM-DD'
+    const [yearStr, monthStr, dayStr] = dateStr.split('-');
+    let year = parseInt(yearStr);
+    let month = parseInt(monthStr);
+    const day = parseInt(dayStr);
+
+    // If the day is after the cutoff, it belongs to the next month
+    if (day > cutoff) {
+      month += 1;
+      if (month > 12) {
+        month = 1;
+        year += 1;
+      }
+    }
+
+    return `${year}-${String(month).padStart(2, '0')}`;
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadMonthlySums();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -60,14 +83,13 @@ export default function Index() {
           income += revenue * 70;
         });
 
-        // The day is considered active if there are games, or if a fund was explicitly saved
         if (games.length > 0 || fundValue !== undefined) {
           hasAnyData = true;
 
           const fund = parseInt(fundValue !== undefined ? (fundValue || '0') : '8800');
           const dailyTotal = fund + income;
 
-          const monthStr = dateStr.substring(0, 7);
+          const monthStr = getReportingMonth(dateStr);
 
           if (sums[monthStr] === undefined) sums[monthStr] = 0;
           sums[monthStr] += dailyTotal;
@@ -79,14 +101,18 @@ export default function Index() {
 
       const result: { month: string, name: string, sum: number }[] = [];
       const d = new Date();
-      const currentMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      // Current reporting month based on today's date and the cutoff
+      const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const currentReportingMonthStr = getReportingMonth(todayStr);
 
       // If there are no games at all, or current month doesn't have any games but we want it to be visible as an empty start state 
       // User might want even current month hidden if empty, let's strictly hide if no games, but keep current month as fallback if completely empty app.
       if (!hasAnyData) {
+        // Extract year and month from the generated reporting month string to show correct name
+        const [repYear, repMonth] = currentReportingMonthStr.split('-');
         result.push({
-          month: currentMonthStr,
-          name: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
+          month: currentReportingMonthStr,
+          name: `${MONTH_NAMES[parseInt(repMonth) - 1]} ${repYear}`,
           sum: 0
         });
       } else {
@@ -125,9 +151,12 @@ export default function Index() {
   };
 
   const confirmDeleteMonth = () => {
+    // Determine visual name of the currently selected month
+    const [y, m] = currentMonth.split('-');
+    const mName = `${MONTH_NAMES[parseInt(m) - 1]} ${y}`;
     Alert.alert(
       "Delete Month",
-      `Are you sure you want to delete all games and funds for ${currentMonth}?`,
+      `Are you sure you want to delete all games and funds for ${mName} (Using cutoff day: 25)?`,
       [
         { text: "Cancel", style: "cancel" },
         { text: "Delete", style: "destructive", onPress: () => deleteMonth() }
@@ -138,10 +167,26 @@ export default function Index() {
   const deleteMonth = async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const monthGamesKeys = keys.filter(k => k.startsWith(`games_${currentMonth}`));
-      const monthFundKeys = keys.filter(k => k.startsWith(`fund_${currentMonth}`));
+      const gameKeys = keys.filter(k => k.startsWith('games_'));
+      const fundKeys = keys.filter(k => k.startsWith('fund_'));
 
-      await AsyncStorage.multiRemove([...monthGamesKeys, ...monthFundKeys]);
+      const keysToDelete: string[] = [];
+
+      // We need to figure out which dates belong to `currentMonth`
+      for (const k of gameKeys) {
+        const dateStr = k.replace('games_', '').trim();
+        if (getReportingMonth(dateStr) === currentMonth) {
+          keysToDelete.push(k);
+        }
+      }
+      for (const k of fundKeys) {
+        const dateStr = k.replace('fund_', '').trim();
+        if (getReportingMonth(dateStr) === currentMonth) {
+          keysToDelete.push(k);
+        }
+      }
+
+      await AsyncStorage.multiRemove(keysToDelete);
 
       // Reload the data
       loadMonthlySums();
